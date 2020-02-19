@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
 #include <string>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -12,6 +12,12 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+ 
+#define PORT "4950"  
+ 
+
+#define BACKLOG 1	 
+#define SECRETSTRING "gimboid"
 
 std::string getCommand(char s[])
 {
@@ -86,115 +92,147 @@ std::string getCommand(char s[])
 
 	return stringReturn;
 }
-int server()
-{
-	//information about what the scoket should take in
-	sockaddr_in serverHint;
-	//serverHint.sin_addr.S_un.S_addr = INADDR_ANY;
-	serverHint.sin_family = AF_INET;
-	serverHint.sin_port = htons(54000);
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-	//Bind
-	if (bind(sockfd, (sockaddr*)&serverHint, sizeof(serverHint)) == SO_ERROR) {
-		std::cout << "cant bind socker " << std::endl;
+int client(){
+	int sockfd;
+	addrinfo hints, *servinfo, *p;
+	sockaddr_storage their_addr; // connector's address information
+	socklen_t sin_size;
+	int rv;
+	char s[INET_ADDRSTRLEN];
+	
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	if ((rv = getaddrinfo( "127.0.0.1", PORT, &hints, &servinfo)) != 0) {
+		std::cout << "error couldn't get address" << std::endl;
 	}
-
-	listen(sockfd, SOMAXCONN);
-	sockaddr_in client;
-	int clientLeng = sizeof(client);
-
-	int clientSocket = accept(sockfd, (sockaddr*)&client, &clientLeng);
-
-
-	std::string whatToSend;
-	bool gameOver = false;
-	while (!gameOver)
-	{
-		char buff[1024];
-		int bytesIn = recv(clientSocket, buff, 1024, 0);
-		if (bytesIn > -1) {
-			//first contact
-			if (strcmp(buff, "magicWordSinep") == 0) {
-				whatToSend = " TheMagic Word Was Sinep!";
-				send(clientSocket, whatToSend.c_str(), whatToSend.size() + 1, 0);
-				std::cout << "client connect" << std::endl;
-			}//quit
-			else if (strcmp(buff, "Q") == 0) {
-				return 0;
-			}
-			else {
-				std::cout << "client sent: " << buff << std::endl;
-				whatToSend = getCommand(buff);
-				send(clientSocket, whatToSend.c_str(), whatToSend.size() + 1, 0);
-				std::cout << "Response: " << whatToSend << std::endl;
-			}
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			std::cout << "error cant create socket" << std::endl;
 		}
-		else {
-			std::cout << "error" << bytesIn << std::endl;
-			getchar();
-			return -1;
-		}
+
+		break;
 	}
-	close(clientSocket);
-	close(sockfd);
-	return 0;
-}
-int client()
-{
 
+	if (p == NULL) {
+		std::cout << "error p == null" << std::endl;
+	}
 
-
-	sockaddr_in server;
-	server.sin_family = AF_INET;
-	server.sin_port = htons(54000);
-	inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-	int connector = connect(sockfd, (sockaddr*)&server, sizeof(server));
-	if (connector == SO_ERROR) {
-		std::cout << "oh shit 2" << std::endl;
+	if (connect(sockfd, p->ai_addr, p->ai_addrlen) < 0 ) {
+		std::cout << errno << std::endl;
+		if(errno == ETIMEDOUT){
+		std::cout << "penis" << std::endl;
+		}	
 		getchar();
-	}
-	//first word to server
-	std::string whatToSend = "magicWordSinep";
-	send(sockfd, whatToSend.c_str(), whatToSend.size() + 1, 0);
-	//listen if it exist
-	char buff[1024];
-	int serverLeng = sizeof(server);
-	int bytesIn = recv(sockfd, buff, 1024, 0);
-	if (bytesIn > -1) {
-		std::cout << "server sent" << buff << std::endl;
-	}
-	else {
-		std::cout << "Error bytein" << bytesIn << std::endl;
-		getchar();
-		return -1;
+		
 	}
 
+	inet_ntop(p->ai_family, ((sockaddr *)p->ai_addr),
+		  s, sizeof s);
+	std::cout << "client: connecting to %s\n" << s << std::endl;
+
+
+	freeaddrinfo(servinfo);
+	int MAXDATASIZE = 1208;
+	char buf[MAXDATASIZE];
 	bool gameOver = false;
-	bool once = true;
-	while (!gameOver) {
-		std::cout << "what you wanna write?" << std::endl;
-		if (once) {
+	bool first = true;
+	while (!gameOver){
+	std::string sendText = "penis";
+		if(first){
 			std::cin.ignore();
-			once = false;
-		}//send information to server
-		std::getline(std::cin, whatToSend);
-		int sendOk = send(sockfd, whatToSend.c_str(), whatToSend.size() + 1, 0);
-		if (sendOk == SO_ERROR) {
-			std::cout << "that didnt work" << std::endl;
-		}//get information back
-		bytesIn = recv(sockfd, buff, 1024, 0);
-		std::cout << "server sent: " << buff << std::endl;
-		if (whatToSend == "Q") {
-			gameOver = true;
+			first = false;
+		}
+		std::getline(std::cin, sendText);
+		if(send(sockfd, sendText.c_str(), sendText.size() + 1, 0)== -1){
+			std::cout << "error couldnt send" << std::endl;
+		}
+		std::cout << "sent: " << sendText << std::endl;
+		if ((recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+			std::cout << "error cant recv" << std::endl;
+		}
+		else{
+			std::cout <<"server sent: " << buf << std::endl;
 		}
 	}
-	close(sockfd);
-	return 0;
+	
+	
 }
 
+int server(){
+	int sockfd, new_fd;
+	addrinfo hints, *servinfo, *p;
+	sockaddr_storage their_addr; // connector's address information
+	socklen_t sin_size;
+	struct sigaction sa;
+	int rv;
+	
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	if((rv = getaddrinfo(NULL, PORT, &hints, &servinfo))!= 0){
+	std::cout << "error" << std::endl;
+	}
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("server: socket");
+			continue;
+		}
+	
+		int yes = 1;
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+				sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+
+		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("server: bind");
+			continue;
+		}
+
+		break;
+	}
+	freeaddrinfo(servinfo);
+	if(p == NULL){
+	std::cout << "error" << std::endl;
+	}
+	if(listen(sockfd, BACKLOG) == -1){
+	std::cout << "error" << std::endl;
+	}
+	std::cout << "can now listen" << std::endl;
+	//sa.sa_handler = sigchld_handler; // reap all dead processes
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+		std::cout << "error" << std::endl;
+	}
+	bool gameOver = false;
+	int readSize;
+	
+	sin_size = sizeof(their_addr);
+		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+		if (new_fd == -1) {
+			std::cout << "error" << std::endl;
+		}
+	while(!gameOver){
+		char msg[1500];
+		int MAXSZ=sizeof(msg)-1;
+		
+		
+		readSize=recv(new_fd,&msg,MAXSZ,0);
+		std::cout << "Client sent: " << msg << std::endl;
+		msg[readSize]=0;
+		std::string answear = getCommand(msg);
+		std::cout << "Sending: " << answear << std::endl;
+		send(new_fd, answear.c_str(), answear.size() + 1, 0);
+	}
+}
 
 int main() {
 	std::string choice;
@@ -215,6 +253,3 @@ int main() {
 	getchar();
 	return 0;
 }
-
-
-
