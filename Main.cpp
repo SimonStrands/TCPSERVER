@@ -19,6 +19,7 @@
 #define BACKLOG 1	 
 #define SECRETSTRING "gimboid"
 
+
 std::string getCommand(char s[])
 {
 	char command[10];
@@ -131,7 +132,7 @@ int client(){
 
 	inet_ntop(p->ai_family, ((sockaddr *)p->ai_addr),
 		  s, sizeof s);
-	std::cout << "client: connecting to %s\n" << s << std::endl;
+	std::cout << "client: connecting to \n" << s << std::endl;
 
 
 	freeaddrinfo(servinfo);
@@ -139,17 +140,24 @@ int client(){
 	char buf[MAXDATASIZE];
 	bool gameOver = false;
 	bool first = true;
-	while (!gameOver){
-	std::string sendText = "penis";
-		if(first){
-			std::cin.ignore();
-			first = false;
+	std::string sendText = "GiveMeQuestion";
+	if(send(sockfd, sendText.c_str(), sendText.size() + 1, 0)== -1){
+		std::cout << "penis" << std::endl;
+	}
+	else{
+		if ((recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+			std::cout << "error cant recv" << std::endl;
 		}
+		else{
+			std::cout <<"server sent: " << buf << std::endl;
+		}
+		std::cin.ignore();
 		std::getline(std::cin, sendText);
 		if(send(sockfd, sendText.c_str(), sendText.size() + 1, 0)== -1){
 			std::cout << "error couldnt send" << std::endl;
 		}
 		std::cout << "sent: " << sendText << std::endl;
+		
 		if ((recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
 			std::cout << "error cant recv" << std::endl;
 		}
@@ -157,6 +165,8 @@ int client(){
 			std::cout <<"server sent: " << buf << std::endl;
 		}
 	}
+	close(sockfd);
+		
 	
 	
 }
@@ -220,21 +230,92 @@ int server(){
 		if (new_fd == -1) {
 			std::cout << "error" << std::endl;
 		}
+		float answear;
+		float x; 
+		float y;
+		std::string Sanswear = "";
 	while(!gameOver){
+		Sanswear = "TEXT TCP SERVER 1.0\n";
 		char msg[1500];
 		int MAXSZ=sizeof(msg)-1;
 		
 		
 		readSize=recv(new_fd,&msg,MAXSZ,0);
 		std::cout << "Client sent: " << msg << std::endl;
-		msg[readSize]=0;
-		std::string answear = getCommand(msg);
-		std::cout << "Sending: " << answear << std::endl;
-		send(new_fd, answear.c_str(), answear.size() + 1, 0);
+		if(strcmp(msg, "GiveMeQuestion")==0){
+			//give question
+			std::cout << "giving question" << std::endl;
+			int rNrG = rand()%8;
+			x = ((rand()%100) +3) /10;
+			y = ((rand()%100) +3) /10;
+			std::cout << x << y << std::endl;
+			switch(rNrG){
+				case 0 :
+				answear = (int)x + (int)y;
+				Sanswear += "add " + std::to_string((int)x) + " " + std::to_string((int)y);
+				break;
+				case 1 :
+				answear = (int)x / (int)y;
+				Sanswear += "div " + std::to_string((int)x) + " " + std::to_string((int)y);
+				break;
+				case 2 :
+				answear = (int)x * (int)y;
+				Sanswear += "mul " + std::to_string((int)x) + " " + std::to_string((int)y);
+				break;
+				case 3 :
+				answear = (int)x - (int)y;
+				Sanswear += "sub " + std::to_string((int)x) + " " + std::to_string((int)y);
+				break;
+				case 4 :
+				answear = x + y;
+				Sanswear += "fadd " + std::to_string(x) + " " + std::to_string(y);
+				break;
+				case 5 :
+				answear = x / y;
+				Sanswear += "fdiv " + std::to_string(x) + " " + std::to_string(y);
+				break;
+				case 6 :
+				answear = x * y;
+				Sanswear += "fmul " + std::to_string(x) + " " + std::to_string(y);
+				break;
+				case 7 :
+				answear = x - y;
+				Sanswear += "fsub " + std::to_string(x) + " " + std::to_string(y);
+				break;
+			}
+			send(new_fd, Sanswear.c_str(), Sanswear.size() + 1, 0);
+		}
+		else if(strcmp(msg, "") == 0){
+
+		}
+		else{
+		//check answear
+			float cAnswear;
+			cAnswear = std::atof(msg);
+			if(cAnswear == answear){
+				Sanswear = "OK";
+				std::cout << "OK" << std::endl;
+			}
+			else{
+				Sanswear = "ERRORs";
+				std::cout << "ERRORs" << std::endl;
+			}
+			msg[readSize]=0;
+			std::cout << "Sending: " << Sanswear << std::endl;
+			send(new_fd, Sanswear.c_str(), Sanswear.size() + 1, 0);
+			new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+			if (new_fd == -1) {
+				std::cout << "error" << std::endl;
+			}
+		}
+		
 	}
+	std::cout << "quitting"<< std::endl;
+	
 }
 
 int main() {
+	 srand(time(0)); 
 	std::string choice;
 	std::cout << "S for server, C for Client" << std::endl;
 	std::cin >> choice;
