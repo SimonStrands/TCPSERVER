@@ -15,83 +15,54 @@
  
 #define PORT "4950"  
  
-
 #define BACKLOG 1	 
-#define SECRETSTRING "gimboid"
 
-
-std::string getCommand(char s[])
-{
+std::string clientCalc(char msg[]){
 	char command[10];
-	sscanf(s, "%s", command);
-
-	//getchar();
-	std::string c(command);
-	std::string stringReturn = c;
-	//The Different commands
-	if (strcmp(command, "add") == 0) {
-		int x = 0;
-		int y = 0;
-		sscanf(s, "%s %d %d", command, &x, &y);
-		stringReturn = std::to_string(x + y);
+	std::string theReturn;
+	int optionint1 = 0;
+	int optionint2 = 0;
+	float optionfloat1 = 0;
+	float optionfloat2 = 0;
+	
+	int rv=sscanf(msg,"%s ",command);
+	if(strcmp(command, "add") == 0){
+		sscanf(msg, "%s %d %d", command, &optionint1, &optionint2);
+		theReturn = std::to_string(optionint1 + optionint2); 
 	}
-	else if (strcmp(command, "div") == 0) {
-		int x = 0;
-		int y = 0;
-		sscanf(s, "%s %d %d", command, &x, &y);
-		if (y != 0) {
-			stringReturn = std::to_string(x / y);
-		}
-		else {
-			stringReturn = "infinity";
-		}
+	else if(strcmp(command, "mul") == 0){
+		sscanf(msg, "%s %d %d", command, &optionint1, &optionint2);
+		theReturn = std::to_string(optionint1 * optionint2); 
 	}
-	else if (strcmp(command, "mul") == 0) {
-		int x = 0;
-		int y = 0;
-		sscanf(s, "%s %d %d", command, &x, &y);
-		stringReturn = std::to_string(x * y);
+	else if(strcmp(command, "sub") == 0){
+		sscanf(msg, "%s %d %d", command, &optionint1, &optionint2);
+		theReturn = std::to_string(optionint1 - optionint2); 
 	}
-	else if (strcmp(command, "sub") == 0) {
-		int x = 0;
-		int y = 0;
-		sscanf(s, "%s %d %d", command, &x, &y);
-		stringReturn = std::to_string(x - y);
+	else if(strcmp(command, "div") == 0){
+		sscanf(msg, "%s %d %d", command, &optionint1, &optionint2);
+		theReturn = std::to_string(optionint1 / optionint2); 
 	}
-	else if (strcmp(command, "fadd") == 0) {
-		float x = 0;
-		float y = 0;
-		sscanf(s, "%s %f %f", command, &x, &y);
-		stringReturn = std::to_string(x + y);
+	else if(strcmp(command, "fadd") == 0){
+		sscanf(msg, "%s %f %f", command, &optionfloat1, &optionfloat2);
+		theReturn = std::to_string(optionfloat1 + optionfloat2); 
 	}
-	else if (strcmp(command, "fdiv") == 0) {
-		float x = 0;
-		float y = 0;
-		sscanf(s, "%s %f %f", command, &x, &y);
-		if (y != 0) {
-			stringReturn = std::to_string(x / y);
-		}
-		else {
-			stringReturn = "infinity";
-		}
+	else if(strcmp(command, "fmul") == 0){
+		sscanf(msg, "%s %f %f", command, &optionfloat1, &optionfloat2);
+		theReturn = std::to_string(optionfloat1 * optionfloat2); 
 	}
-	else if (strcmp(command, "fmul") == 0) {
-		float x = 0;
-		float y = 0;
-		sscanf(s, "%s %f %f", command, &x, &y);
-		stringReturn = std::to_string(x * y);
+	else if(strcmp(command, "fdiv") == 0){
+		sscanf(msg, "%s %f %f", command, &optionfloat1, &optionfloat2);
+		theReturn = std::to_string(optionfloat1 / optionfloat2); 
 	}
-	else if (strcmp(command, "fsub") == 0) {
-		float x = 0;
-		float y = 0;
-		sscanf(s, "%s %f %f", command, &x, &y);
-		stringReturn = std::to_string(x - y);
+	else if(strcmp(command, "fsub") == 0){
+		sscanf(msg, "%s %f %f", command, &optionfloat1, &optionfloat2);
+		theReturn = std::to_string(optionfloat1 - optionfloat2); 
 	}
-	else if (strcmp(command, "penis") == 0) {
-		stringReturn = "Fuck yeah";
+	else{
+		theReturn = "error";
 	}
-
-	return stringReturn;
+	
+	return theReturn;
 }
 
 int client(){
@@ -113,7 +84,6 @@ int client(){
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 			std::cout << "error cant create socket" << std::endl;
 		}
-
 		break;
 	}
 
@@ -122,10 +92,7 @@ int client(){
 	}
 
 	if (connect(sockfd, p->ai_addr, p->ai_addrlen) < 0 ) {
-		std::cout << errno << std::endl;
-		if(errno == ETIMEDOUT){
-		std::cout << "penis" << std::endl;
-		}	
+		std::cout << "can't connect" << std::endl;	
 		getchar();
 		
 	}
@@ -151,8 +118,14 @@ int client(){
 		else{
 			std::cout <<"server sent: " << buf << std::endl;
 		}
-		std::cin.ignore();
-		std::getline(std::cin, sendText);
+		if ((recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+			std::cout << "error cant recv" << std::endl;
+		}
+		else{
+			std::cout <<"server sent: " << buf << std::endl;
+		}
+		//change here
+		sendText = clientCalc(buf);
 		if(send(sockfd, sendText.c_str(), sendText.size() + 1, 0)== -1){
 			std::cout << "error couldnt send" << std::endl;
 		}
@@ -216,7 +189,6 @@ int server(){
 	std::cout << "error" << std::endl;
 	}
 	std::cout << "can now listen" << std::endl;
-	//sa.sa_handler = sigchld_handler; // reap all dead processes
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
@@ -234,6 +206,7 @@ int server(){
 		float x; 
 		float y;
 		std::string Sanswear = "";
+		std::string stringAnswear = "";
 	while(!gameOver){
 		Sanswear = "TEXT TCP SERVER 1.0\n";
 		char msg[1500];
@@ -243,46 +216,53 @@ int server(){
 		readSize=recv(new_fd,&msg,MAXSZ,0);
 		std::cout << "Client sent: " << msg << std::endl;
 		if(strcmp(msg, "GiveMeQuestion")==0){
+			send(new_fd, Sanswear.c_str(), Sanswear.size() + 1, 0);
 			//give question
 			std::cout << "giving question" << std::endl;
 			int rNrG = rand()%8;
-			x = ((rand()%100) +3) /10;
-			y = ((rand()%100) +3) /10;
+			x = ((rand()%100) +3);
+			y = ((rand()%100) +3);
+			std::cout << x << y << std::endl;
+			x = x/10;
+			y = y/10;
 			std::cout << x << y << std::endl;
 			switch(rNrG){
 				case 0 :
 				answear = (int)x + (int)y;
-				Sanswear += "add " + std::to_string((int)x) + " " + std::to_string((int)y);
+				Sanswear = "add " + std::to_string((int)x) + " " + std::to_string((int)y);
 				break;
 				case 1 :
 				answear = (int)x / (int)y;
-				Sanswear += "div " + std::to_string((int)x) + " " + std::to_string((int)y);
+				Sanswear = "div " + std::to_string((int)x) + " " + std::to_string((int)y);
 				break;
 				case 2 :
 				answear = (int)x * (int)y;
-				Sanswear += "mul " + std::to_string((int)x) + " " + std::to_string((int)y);
+				Sanswear = "mul " + std::to_string((int)x) + " " + std::to_string((int)y);
 				break;
 				case 3 :
 				answear = (int)x - (int)y;
-				Sanswear += "sub " + std::to_string((int)x) + " " + std::to_string((int)y);
+				Sanswear = "sub " + std::to_string((int)x) + " " + std::to_string((int)y);
 				break;
 				case 4 :
 				answear = x + y;
-				Sanswear += "fadd " + std::to_string(x) + " " + std::to_string(y);
+				Sanswear = "fadd " + std::to_string(x) + " " + std::to_string(y);
 				break;
 				case 5 :
 				answear = x / y;
-				Sanswear += "fdiv " + std::to_string(x) + " " + std::to_string(y);
+				Sanswear = "fdiv " + std::to_string(x) + " " + std::to_string(y);
 				break;
 				case 6 :
 				answear = x * y;
-				Sanswear += "fmul " + std::to_string(x) + " " + std::to_string(y);
+				Sanswear = "fmul " + std::to_string(x) + " " + std::to_string(y);
 				break;
 				case 7 :
 				answear = x - y;
-				Sanswear += "fsub " + std::to_string(x) + " " + std::to_string(y);
+				Sanswear = "fsub " + std::to_string(x) + " " + std::to_string(y);
 				break;
 			}
+			std::cout << "the question " << Sanswear<<std::endl;
+			std::cout << "the answear " << answear << std::endl;
+			stringAnswear = std::to_string(answear);
 			send(new_fd, Sanswear.c_str(), Sanswear.size() + 1, 0);
 		}
 		else if(strcmp(msg, "") == 0){
@@ -292,13 +272,20 @@ int server(){
 		//check answear
 			float cAnswear;
 			cAnswear = std::atof(msg);
-			if(cAnswear == answear){
+			if(strcmp(stringAnswear.c_str(), msg)==0 || cAnswear == answear){
 				Sanswear = "OK";
 				std::cout << "OK" << std::endl;
 			}
 			else{
-				Sanswear = "ERRORs";
-				std::cout << "ERRORs" << std::endl;
+				cAnswear = std::atoi(msg);
+				if(cAnswear == answear){
+					Sanswear = "OK";
+					std::cout << "OK" << std::endl;
+				}
+				else{
+					Sanswear = "ERRORs";
+					std::cout << "ERRORs" << std::endl;
+				}
 			}
 			msg[readSize]=0;
 			std::cout << "Sending: " << Sanswear << std::endl;
